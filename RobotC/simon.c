@@ -61,6 +61,7 @@
 #define wdMotorFlagRight    motorR
 
 #include "wdMotorLib.c"
+#include "wdSonar.c"
 
 typedef enum t_GameAction {
     kActionNone = 0,
@@ -71,6 +72,7 @@ typedef enum t_GameAction {
 
     kActionInit,
     kActionWin,
+    kActionHello,
     kActionLoss
 } t_GameAction;
 
@@ -145,6 +147,26 @@ simonPlayWinSound()
 }
 
 /*-----------------------------------------------------------------------------*/
+// Play the fancy win sound
+void
+simonPlayHelloSound()
+{
+    int     note;
+    int     octave;
+    int     i;
+
+    for(i=0;i<30;i++)
+        {
+        note = (rand() % 8) + 1;
+        octave = (rand() % 2) + 1;
+        playNote( note, octave, 10 );
+        wait1Msec(100);
+        }
+    // Wait for sound queue to empty
+    while( bSoundActive ) wait1Msec(10);
+}
+
+/*-----------------------------------------------------------------------------*/
 // Play note associated with a touch LED
 void
 simonSoundTouchLedPlay( t_GameAction l )
@@ -186,6 +208,11 @@ simonSoundTask()
         else
         if( gAction == kActionLoss ) {
             playNote( 1, 1, 100 );
+            gAction = kActionNone;
+            }
+        else
+        if( gAction == kActionHello ) {
+            simonPlayHelloSound();
             gAction = kActionNone;
             }
         else
@@ -332,6 +359,7 @@ simonUserButtonGet()
 
 // forward ref
 void    simonDisplayGameLevel();
+void    simonDisplaySonar();
 
 void
 simonPreGame()
@@ -340,6 +368,7 @@ simonPreGame()
     int     i;
     int     loops = 0;
     int     scrollDir = MATRIX_MODE_SCROLL_LEFT;
+    int     sonarTimeout = 10;
 
     eraseDisplay();
     displayBigTextLine(0, "Touch LED");
@@ -433,7 +462,31 @@ simonPreGame()
                 loops = 0;
                 }
             }
-        }
+        // Display sonar
+        simonDisplaySonar();
+
+        // Check is sonar is below trigger range
+        // ie. has a new player walked up to the demo
+        if( wdGetSonarState() && sonarTimeout == 0 )
+            {
+            // Welcome a new player
+            gAction = kActionHello;
+            wdLedFlashText( userPort, "Play", 5, true );
+            // reset scrolling banner
+            ledMatrixWriteString( userPort, BANNER_TEXT, MATRIX_MODE_SPEED_SLOW3 | scrollDir );
+            // Wait for player to leave before doing this again
+            sonarTimeout = -1;
+            }
+        else
+            {
+            // Wait for player to leave then reset timeout
+            if( !wdGetSonarState() && sonarTimeout == (-1) )
+                sonarTimeout = 10;
+            else
+            if( sonarTimeout > 0 )
+                sonarTimeout--;
+            }
+       }
 }
 
 /*-----------------------------------------------------------------------------*/
@@ -463,6 +516,20 @@ simonNewGame()
         }
 
     writeDebugStreamLine("");
+}
+
+/*-----------------------------------------------------------------------------*/
+// Display Sonar info
+
+void
+simonDisplaySonar()
+{
+    int d = wdSonarGetDistance();
+
+    if( d < 0 )
+       displayStringAt(100, 12, "----");
+    else
+        displayStringAt(100, 12, "%4d", d);
 }
 
 /*-----------------------------------------------------------------------------*/
@@ -673,6 +740,7 @@ task main()
     // start the background tasks
     startTask(simonSoundTask);
     startTask(wdMotorTask);
+    startTask(wdSonarTask);
 
     // Find the user sensor
     userPort = genericI2cFindFirst();
@@ -685,6 +753,9 @@ task main()
         displayBigTextLine( 3, "Error");
         while(1) wait1Msec(10);
         }
+
+    // We are initializing, let user know that
+    displayTextLine( 1, "Initialize...");
 
     // Clear the LED matrix
     wdLedClear( userPort );

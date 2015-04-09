@@ -8,10 +8,12 @@
 /*                                                                             */
 /*    Module:     wdMotorLib.c                                                 */
 /*    Author:     James Pearman                                                */
-/*    Created:    20 March 2014                                                */
+/*    Created:    20 March 2015                                                */
 /*                                                                             */
 /*    Revisions:                                                               */
 /*                V1.00     tbd - Initial release                              */
+/*                 4 April  Added motor port check so we can disconnect        */
+/*                          motors if needed.                                  */
 /*                                                                             */
 /*-----------------------------------------------------------------------------*/
 /*                                                                             */
@@ -75,11 +77,36 @@ wdMotorFlagClose()
 }
 
 /*-----------------------------------------------------------------------------*/
+// Check that motor at index is present
+bool
+wdMotorCheck(tMotor index)
+{
+    TVexIQDeviceTypes   type;
+    TDeviceStatus       status;
+    short               ver;
+
+    getVexIqDeviceInfo( (portName)index, type, status, ver );
+    if( type == vexIQ_SensorMOTOR )
+        return(true);
+    else
+        return(false);
+}
+
+/*-----------------------------------------------------------------------------*/
 // Initialize the flag motors - set low current etc.
 
-void
+int
 wdMotorInit()
 {
+    // Check motors are connected
+    // Motors are checked by ROBOTC on main entry usually
+    // this can be turned off in the pref dialog or by not including in the
+    // motors & sensors setup.
+    if(wdMotorCheck( wdMotorFlagLeft ) == false )
+        return(0);
+    if(wdMotorCheck( wdMotorFlagRight ) == false )
+        return(0);
+
     // Limit current and put each motor
     // into coast mode
     setMotorCurrentLimit(wdMotorFlagLeft, 500);
@@ -87,9 +114,14 @@ wdMotorInit()
     setMotorCurrentLimit(wdMotorFlagRight, 500);
     setMotorBrakeMode(wdMotorFlagRight, motorCoast);
 
+    // right needs to be reversed
+    setMotorReversed(wdMotorFlagRight, true);
+
     // Clear encoders
     nMotorEncoder[ wdMotorFlagLeft ] = 0;
     nMotorEncoder[ wdMotorFlagRight ] = 0;
+
+    return(1);
 }
 
 /*-----------------------------------------------------------------------------*/
@@ -144,7 +176,12 @@ task
 wdMotorTask()
 {
     // Initialize the motors
-    wdMotorInit();
+    if( wdMotorInit() == 0 )
+        {
+        // A motor is not connected so we are done
+        while(1)
+            wait1Msec(10);
+        }
 
     //Home the motors
     wdMotorFlagHome();
