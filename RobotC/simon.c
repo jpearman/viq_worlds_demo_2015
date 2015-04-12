@@ -110,6 +110,11 @@ int          gLength;
 // Port for the user sensor that controls the LED matrix
 portName userPort;
 
+// Once sonar as triggered we set timeout before a second trigger
+// default is 15 seconds
+#define SONAR_TIMEOUT       15
+int     sonarTimeout = -1;
+
 /*-----------------------------------------------------------------------------*/
 // Map sensor ports
 #define touchA  touch1
@@ -368,7 +373,6 @@ simonPreGame()
     int     i;
     int     loops = 0;
     int     scrollDir = MATRIX_MODE_SCROLL_LEFT;
-    int     sonarTimeout = 10;
 
     eraseDisplay();
     displayBigTextLine(0, "Touch LED");
@@ -481,7 +485,7 @@ simonPreGame()
             {
             // Wait for player to leave then reset timeout
             if( !wdGetSonarState() && sonarTimeout == (-1) )
-                sonarTimeout = 10;
+                sonarTimeout = SONAR_TIMEOUT;
             else
             if( sonarTimeout > 0 )
                 sonarTimeout--;

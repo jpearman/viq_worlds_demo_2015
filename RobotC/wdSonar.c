@@ -120,6 +120,6 @@ wdSonarTask()
             // simple IIR filter
             distanceFiltered = (distanceFiltered * 0.8) + (currentDistance * 0.2);
 
-        sleep(50);
+        sleep(100);
         }
 }

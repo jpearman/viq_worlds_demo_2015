@@ -66,6 +66,16 @@ wdMotorFlagOpen()
 }
 
 /*-----------------------------------------------------------------------------*/
+// Send the two flag motors to the open position
+void
+wdMotorFlagOpen( int valueL=90, int valueR=90 )
+{
+    wdMotorTargetL = valueL;
+    wdMotorTargetR = valueR;
+    wdwdMotorFlagRightepositionRequest = true;
+}
+
+/*-----------------------------------------------------------------------------*/
 // Send the two flag motors to the close position
 
 void
