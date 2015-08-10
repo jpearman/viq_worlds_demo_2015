@@ -40,3 +40,5 @@ matrix_demo.c runs a demo of the LED matrix capability.
 
 simon.c is a simple implementation of the 70's game.
 
+![demo robot]
+(https://jpearman.smugmug.com/Robotics/Misc/i-PgGHcvx/0/M/IMG_0367sm-M.jpg)
